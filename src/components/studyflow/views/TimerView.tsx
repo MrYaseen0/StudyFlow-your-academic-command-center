@@ -52,8 +52,11 @@ export function TimerView() {
           courseId: selectedTask.courseId,
           duration: Math.round(duration / 60),
           mode: "focus",
+        }).then(() => {
+          toast.success(`Focus session logged for "${selectedTask.title}"`);
+        }).catch(() => {
+          toast.error("Couldn't log session");
         });
-        toast.success(`Focus session logged for "${selectedTask.title}"`);
         setCompletedRounds((n) => n + 1);
         const isLong = (completedRounds + 1) % 4 === 0;
         const nextDur = isLong ? LONG_BREAK * 60 : PRESETS.break * 60;

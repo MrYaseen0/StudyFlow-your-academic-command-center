@@ -1,14 +1,15 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, ArrowRight, ArrowLeft, Check, Sparkles, GraduationCap, ClipboardList } from "lucide-react";
+import { Plus, Trash2, ArrowRight, ArrowLeft, Check, Sparkles, GraduationCap, ClipboardList, Loader2, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { COURSE_COLORS, type Course, type Task } from "@/lib/types";
+import { COURSE_COLORS } from "@/lib/types";
 import { getSampleData } from "@/lib/sample-data";
 import { DrawBooks, DrawClock, DrawCap, DrawNotebook, DrawRocket } from "./Drawings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "./AuthContext";
 
 interface DraftCourse {
   id: string;
@@ -38,81 +39,79 @@ function toLocalInput(days: number): string {
 }
 
 export function OnboardingFlow() {
-  const completeOnboarding = useStore((s) => s.completeOnboarding);
   const addCourse = useStore((s) => s.addCourse);
   const addTask = useStore((s) => s.addTask);
   const addGrade = useStore((s) => s.addGrade);
-  const setTarget = useStore((s) => s.setTarget);
+  const { logout } = useAuth();
 
   const [step, setStep] = useState(0);
   const [courses, setCourses] = useState<DraftCourse[]>([
     { id: uid(), name: "", code: "", creditHours: 3, color: COURSE_COLORS[0], instructor: "" },
   ]);
   const [tasks, setTasks] = useState<DraftTask[]>([]);
+  const [busy, setBusy] = useState(false);
 
   const validCourses = courses.filter((c) => c.name.trim() && c.code.trim());
 
-  const loadSample = () => {
-    const data = getSampleData();
-    const courseMap: Record<string, string> = {};
-    data.courses.forEach((c) => {
-      const newId = addCourse({
-        name: c.name, code: c.code, instructor: c.instructor,
-        color: c.color, creditHours: c.creditHours,
-      });
-      courseMap[c.id] = newId;
-    });
-    data.tasks.forEach((t) => {
-      const cid = courseMap[t.courseId];
-      if (cid) addTask({
-        title: t.title, courseId: cid, dueDate: t.dueDate,
-        priority: t.priority, status: t.status, estimatedHours: t.estimatedHours,
-      });
-    });
-    data.grades.forEach((g) => {
-      const cid = courseMap[g.courseId];
-      if (cid) addGrade({ courseId: cid, assessmentName: g.assessmentName, grade: g.grade, weight: g.weight });
-    });
-    completeOnboarding(data.courses, data.tasks);
-    toast.success("Sample semester loaded — welcome to StudyFlow");
+  const loadSample = async () => {
+    setBusy(true);
+    try {
+      const data = getSampleData();
+      const courseMap: Record<string, string> = {};
+      for (const c of data.courses) {
+        const created = await addCourse({
+          name: c.name, code: c.code, instructor: c.instructor,
+          color: c.color, creditHours: c.creditHours,
+        });
+        courseMap[c.id] = created.id;
+      }
+      for (const t of data.tasks) {
+        const cid = courseMap[t.courseId];
+        if (cid) await addTask({
+          title: t.title, courseId: cid, dueDate: t.dueDate,
+          priority: t.priority, status: t.status, estimatedHours: t.estimatedHours,
+        });
+      }
+      for (const g of data.grades) {
+        const cid = courseMap[g.courseId];
+        if (cid) await addGrade({ courseId: cid, assessmentName: g.assessmentName, grade: g.grade, weight: g.weight });
+      }
+      toast.success("Sample semester loaded — welcome to StudyFlow");
+      // AppShell will auto-advance past onboarding since courses.length > 0
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load sample");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const finish = () => {
-    // commit courses + tasks to store
-    const courseMap: Record<string, string> = {};
-    validCourses.forEach((c) => {
-      const newId = addCourse({
-        name: c.name.trim(),
-        code: c.code.trim().toUpperCase(),
-        instructor: c.instructor.trim(),
-        color: c.color,
-        creditHours: c.creditHours,
-      });
-      courseMap[c.id] = newId;
-    });
-    const committedCourses: Course[] = validCourses.map((c) => ({
-      id: courseMap[c.id],
-      name: c.name.trim(),
-      code: c.code.trim().toUpperCase(),
-      instructor: c.instructor.trim(),
-      color: c.color,
-      creditHours: c.creditHours,
-      createdAt: new Date().toISOString(),
-    }));
-    const committedTasks: Task[] = [];
-    tasks.filter((t) => t.title.trim() && courseMap[t.courseId]).forEach((t) => {
-      const cid = courseMap[t.courseId];
-      const due = new Date();
-      due.setDate(due.getDate() + t.dueInDays);
-      due.setHours(23, 0, 0, 0);
-      const id = addTask({ title: t.title.trim(), courseId: cid, dueDate: due.toISOString() });
-      committedTasks.push({
-        id, title: t.title.trim(), courseId: cid, dueDate: due.toISOString(),
-        priority: "medium", status: "not_started", estimatedHours: 1, createdAt: new Date().toISOString(),
-      });
-    });
-    completeOnboarding(committedCourses, committedTasks);
-    toast.success("You're all set — welcome to StudyFlow");
+  const finish = async () => {
+    setBusy(true);
+    try {
+      const courseMap: Record<string, string> = {};
+      for (const c of validCourses) {
+        const created = await addCourse({
+          name: c.name.trim(),
+          code: c.code.trim().toUpperCase(),
+          instructor: c.instructor.trim(),
+          color: c.color,
+          creditHours: c.creditHours,
+        });
+        courseMap[c.id] = created.id;
+      }
+      for (const t of tasks.filter((t) => t.title.trim() && courseMap[t.courseId])) {
+        const cid = courseMap[t.courseId];
+        const due = new Date();
+        due.setDate(due.getDate() + t.dueInDays);
+        due.setHours(23, 0, 0, 0);
+        await addTask({ title: t.title.trim(), courseId: cid, dueDate: due.toISOString() });
+      }
+      toast.success("You're all set — welcome to StudyFlow");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to set up");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addCourseRow = () => {
@@ -146,11 +145,19 @@ export function OnboardingFlow() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="px-6 py-5 flex items-center gap-2.5 max-w-5xl mx-auto w-full">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8A0AC, #C9748A)" }}>
-          <span className="text-white font-serif font-semibold">S</span>
+      <header className="px-6 py-5 flex items-center justify-between gap-2.5 max-w-5xl mx-auto w-full">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8A0AC, #C9748A)" }}>
+            <span className="text-white font-serif font-semibold">S</span>
+          </div>
+          <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-serif)" }}>StudyFlow</h1>
         </div>
-        <h1 className="text-lg font-semibold" style={{ fontFamily: "var(--font-serif)" }}>StudyFlow</h1>
+        <button
+          onClick={logout}
+          className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1.5 text-xs font-medium text-ink-secondary hover:bg-cream-elevated hover:text-rose-urgent transition-colors"
+        >
+          <LogOut size={13} /> Sign out
+        </button>
       </header>
 
       <div className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 pb-12">
@@ -237,7 +244,8 @@ export function OnboardingFlow() {
                   </button>
                   <button
                     onClick={loadSample}
-                    className="group rounded-card p-5 border-2 text-left transition-all hover:shadow-warm bg-white relative overflow-hidden"
+                    disabled={busy}
+                    className="group rounded-card p-5 border-2 text-left transition-all hover:shadow-warm bg-white relative overflow-hidden disabled:opacity-60"
                     style={{ borderColor: "var(--color-border-soft)" }}
                   >
                     <div className="absolute -right-3 -bottom-3 opacity-15 group-hover:opacity-30 transition-opacity">
@@ -421,10 +429,11 @@ export function OnboardingFlow() {
                   </button>
                   <button
                     onClick={finish}
-                    className="inline-flex items-center gap-1.5 rounded-pill px-5 py-2 text-sm font-semibold text-white transition-colors"
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 rounded-pill px-5 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-60"
                     style={{ backgroundColor: "var(--color-blush-deep)" }}
                   >
-                    <Check size={14} /> Enter StudyFlow
+                    {busy ? <><Loader2 size={14} className="animate-spin" /> Setting up…</> : <><Check size={14} /> Enter StudyFlow</>}
                   </button>
                 </div>
                 </div>

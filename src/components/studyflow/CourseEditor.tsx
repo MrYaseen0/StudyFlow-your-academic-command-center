@@ -27,7 +27,7 @@ export function CourseEditor({ course, open, onOpenChange }: CourseEditorProps) 
   const [color, setColor] = useState(() => course?.color ?? COURSE_COLORS[Math.floor(Math.random() * COURSE_COLORS.length)]);
   const [creditHours, setCreditHours] = useState(() => course?.creditHours ?? 3);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Add a course name");
       return;
@@ -36,26 +36,30 @@ export function CourseEditor({ course, open, onOpenChange }: CourseEditorProps) 
       toast.error("Add a course code");
       return;
     }
-    if (course) {
-      updateCourse(course.id, {
-        name: name.trim(),
-        code: code.trim().toUpperCase(),
-        instructor: instructor.trim(),
-        color,
-        creditHours,
-      });
-      toast.success("Course updated");
-    } else {
-      addCourse({
-        name: name.trim(),
-        code: code.trim().toUpperCase(),
-        instructor: instructor.trim(),
-        color,
-        creditHours,
-      });
-      toast.success("Course added");
+    try {
+      if (course) {
+        updateCourse(course.id, {
+          name: name.trim(),
+          code: code.trim().toUpperCase(),
+          instructor: instructor.trim(),
+          color,
+          creditHours,
+        });
+        toast.success("Course updated");
+      } else {
+        await addCourse({
+          name: name.trim(),
+          code: code.trim().toUpperCase(),
+          instructor: instructor.trim(),
+          color,
+          creditHours,
+        });
+        toast.success("Course added");
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save course");
     }
-    onOpenChange(false);
   };
 
   return (

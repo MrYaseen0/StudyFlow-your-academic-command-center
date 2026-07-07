@@ -30,7 +30,7 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(t);
   }, []);
 
-  const submit = () => {
+  const submit = async () => {
     if (!title.trim()) {
       toast.error("Add a title");
       titleRef.current?.focus();
@@ -40,16 +40,20 @@ function CapturePanel({ onClose }: { onClose: () => void }) {
       toast.error("Add a course first");
       return;
     }
-    addTask({
-      title: title.trim(),
-      courseId,
-      dueDate: dueDate
-        ? new Date(dueDate).toISOString()
-        : new Date(Date.now() + 2 * 86400000).toISOString(),
-      priority: "medium",
-    });
-    toast.success("Captured");
-    onClose();
+    try {
+      await addTask({
+        title: title.trim(),
+        courseId,
+        dueDate: dueDate
+          ? new Date(dueDate).toISOString()
+          : new Date(Date.now() + 2 * 86400000).toISOString(),
+        priority: "medium",
+      });
+      toast.success("Captured");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to capture");
+    }
   };
 
   return (

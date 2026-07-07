@@ -70,3 +70,60 @@ Stage Summary:
 - Added 5 reusable hand-drawn SVG line illustrations used as decorative accents in onboarding, sidebar tip, and dashboard empty state.
 - Design consistency maintained: same palette, same fonts, same card/shadow system — the photo is a texture, not a replacement for the design system.
 - If the user wants the background more/less visible, the opacity is controlled by the rgba alpha values in globals.css body rule (currently 0.86-0.92) — easy to dial.
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Add authentication & authorization — register/login with credentials, only registered users can log in with their credentials, and logged-in users get access to attendance, records & taking class features.
+
+Work Log:
+- Installed bcryptjs (+types) for password hashing. jose already present (JWT).
+- Wrote Prisma schema with User + per-user Course/Task/GradeEntry/PomodoroSession/Attendance models (all FK to userId, cascade delete). Ran db:push + db:generate. SQLite at db/custom.db.
+- Built auth layer:
+  - src/lib/auth.ts: hashPassword, verifyPassword, createToken/verifyToken (jose HS256, 30-day TTL).
+  - src/lib/session.ts: getSessionUser, requireUser (returns 401 if unauth), setSessionCookie/clearSessionCookie (httpOnly, sameSite=lax), parseJson.
+  - API routes: POST /api/auth/register (zod-validated, bcrypt hash, creates user + sets cookie), POST /api/auth/login (verifies credentials, constant-time to prevent enumeration), POST /api/auth/logout, GET /api/auth/session.
+- Built protected CRUD API routes — every route calls requireUser() and scopes all queries by user.id (true authorization):
+  - GET /api/hydrate (single call returns courses+tasks+grades+sessions+attendance for the logged-in user)
+  - /api/courses (GET/POST) + /api/courses/[id] (PATCH/DELETE)
+  - /api/tasks (GET/POST) + /api/tasks/[id] (PATCH/DELETE)
+  - /api/grades (GET/POST) + /api/grades/[id] (PATCH/DELETE)
+  - /api/sessions (GET/POST) + /api/sessions/[id] (DELETE)
+  - /api/attendance (GET/POST upsert by course+date) + /api/attendance/[id] (DELETE)
+- Frontend auth:
+  - src/components/studyflow/AuthContext.tsx: AuthProvider exposes {user, loading, login, register, logout}; restores session via /api/auth/session on mount.
+  - src/components/studyflow/AuthScreen.tsx: login/register tabs, campus-photo hero, zod-validated client + server errors, design-system consistent (cream/blush, Fraunces headings).
+  - AppShell.tsx rewritten: AuthProvider wraps everything; gates on loading → AuthScreen (if no user) → hydrate (if user) → OnboardingFlow (if 0 courses) → DashboardShell. logoutClears local state on sign-out.
+- Migrated Zustand store from localStorage to API-backed:
+  - Removed persist middleware (data is server-side now). targets (what-if) kept in-memory.
+  - hydrate() fetches /api/hydrate on login. logoutClear() resets on logout.
+  - Creations (addCourse/addTask/addGrade/addSession/setAttendance) are async — await POST, then commit to local state. Returns the server record.
+  - Updates/deletes are optimistic (update local immediately, fire PATCH/DELETE, rollback + toast on error).
+  - Added attendance[] state + setAttendance/deleteAttendance actions.
+- Updated all callers for async: OnboardingFlow (loadSample/finish now async with busy state), QuickCaptureButton, TaskEditor, CourseEditor, GradesView, TimerView.
+- New features (the "attendance, records, taking class" the user asked for):
+  - AttendanceView: "Today's check-in" — per-course Present/Absent/Late/Excused buttons (the "taking class" check-in); per-course attendance-rate bars; weekly grid (course × day) with status icons; week navigation.
+  - RecordsView: consolidated academic transcript — 4 summary cards (GPA, credits, attendance %, focus hours) + full table per course (credits, current/projected grade, letter, GPA pts, attendance %, focus hours) with overall totals row.
+  - Added "Attendance" + "Records" to nav (desktop sidebar + mobile bottom nav).
+  - Added user avatar (initial) + name + Sign-out button to header; added Sign-out to onboarding header too (so users aren't stuck on onboarding).
+- Lint: refactored AttendanceView JSX (member-expression components → capitalized local vars). 0 errors.
+
+Verification (Agent Browser, full end-to-end):
+- Register flow: created "Ayesha Khan" (ayesha@university.edu / secret123) → logged in automatically → onboarding → loaded sample semester → dashboard populated with her data from the API.
+- Login flow: signed out → login screen → signed back in with same credentials → her data persisted (server-side, tied to her account).
+- Authorization: wrong password → "Incorrect email or password", blocked from app. Duplicate email registration → "An account with this email already exists", blocked.
+- Multi-user data isolation: registered second user "Bilal Ahmed" → saw empty onboarding (Ayesha's data NOT visible). Confirms per-user scoping.
+- Session persistence: reload restores logged-in state via httpOnly cookie.
+- Attendance: clicked "Present" check-in for a course → saved (POST /api/attendance 200), status shown.
+- Records view: transcript table renders with all columns + overall row.
+- VLM: auth screen + attendance + records all consistent cream/blush palette, readable, no layout issues.
+- API: all routes return 200, Prisma queries correctly scoped by userId (confirmed in dev log).
+- No runtime/console errors after clean reload.
+
+Stage Summary:
+- StudyFlow is now a multi-user authenticated app. Users must register (name + email + password, ≥6 chars) and can only log in with those exact credentials.
+- All data (courses, tasks, grades, pomodoro sessions, attendance) is server-side in SQLite, scoped per user via userId — true authorization. No user can see another's data.
+- New authorized features: Attendance (daily class check-in + rate tracking + weekly grid) and Records (full academic transcript) — accessible only after login.
+- Existing features (dashboard, courses, planner, grades, focus timer, quick capture) all migrated to the API-backed store with optimistic updates; UX remains snappy.
+- Design system fully preserved: cream/blush palette, Fraunces/Inter/JetBrains Mono, campus photo background, hand-drawn illustrations, 16px cards, warm shadow.
+- Session via httpOnly JWT cookie (30-day), bcrypt password hashing, zod validation on all inputs.

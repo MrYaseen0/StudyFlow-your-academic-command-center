@@ -1,9 +1,10 @@
 // StudyFlow domain types
 
-export type View = "dashboard" | "courses" | "planner" | "grades" | "timer";
+export type View = "dashboard" | "courses" | "planner" | "grades" | "timer" | "attendance" | "records";
 
 export type Priority = "high" | "medium" | "low";
 export type Status = "not_started" | "in_progress" | "done";
+export type AttendanceStatus = "present" | "absent" | "late" | "excused";
 
 export interface Course {
   id: string;
@@ -43,6 +44,14 @@ export interface PomodoroSession {
   duration: number; // minutes
   completedAt: string; // ISO
   mode: "focus" | "break";
+}
+
+export interface AttendanceRecord {
+  id: string;
+  courseId: string;
+  date: string; // ISO (date only, midnight)
+  status: AttendanceStatus;
+  note?: string;
 }
 
 export type UrgencyLevel = "done" | "overdue" | "urgent" | "soon" | "calm";

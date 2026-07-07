@@ -1,8 +1,9 @@
 "use client";
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
 import type {
+  AttendanceRecord,
+  AttendanceStatus,
   Course,
   GradeEntry,
   PomodoroSession,
@@ -27,28 +28,29 @@ interface StoreState {
   tasks: Task[];
   grades: GradeEntry[];
   sessions: PomodoroSession[];
-  targets: Record<string, number>; // courseId -> what-if target %
-  onboarded: boolean;
+  attendance: AttendanceRecord[];
+  targets: Record<string, number>; // courseId -> what-if target % (local, ephemeral)
+  hydrated: boolean;
   view: View;
   selectedTaskId: string | null;
   quickCaptureOpen: boolean;
+
+  // lifecycle
+  hydrate: () => Promise<void>;
+  logoutClear: () => void;
 
   // nav
   setView: (v: View) => void;
   setSelectedTask: (id: string | null) => void;
   setQuickCapture: (open: boolean) => void;
 
-  // onboarding
-  completeOnboarding: (courses: Course[], tasks: Task[]) => void;
-  resetAll: () => void;
-
-  // courses
-  addCourse: (c: Omit<Course, "id" | "createdAt">) => string;
+  // courses (async create; optimistic update/delete)
+  addCourse: (c: Omit<Course, "id" | "createdAt">) => Promise<Course>;
   updateCourse: (id: string, patch: Partial<Course>) => void;
   deleteCourse: (id: string) => void;
 
-  // tasks
-  addTask: (t: NewTaskInput) => string;
+  // tasks (async create; optimistic update/delete)
+  addTask: (t: NewTaskInput) => Promise<Task>;
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleTask: (id: string) => void;
@@ -56,146 +58,228 @@ interface StoreState {
   rescheduleTask: (id: string, dueDate: string) => void;
 
   // grades
-  addGrade: (g: Omit<GradeEntry, "id">) => void;
+  addGrade: (g: Omit<GradeEntry, "id">) => Promise<GradeEntry>;
   updateGrade: (id: string, patch: Partial<GradeEntry>) => void;
   deleteGrade: (id: string) => void;
   setTarget: (courseId: string, target: number) => void;
 
   // pomodoro
-  addSession: (s: Omit<PomodoroSession, "id" | "completedAt">) => void;
+  addSession: (s: Omit<PomodoroSession, "id" | "completedAt">) => Promise<PomodoroSession>;
+
+  // attendance
+  setAttendance: (courseId: string, date: string, status: AttendanceStatus, note?: string) => Promise<void>;
+  deleteAttendance: (id: string) => void;
 }
 
-function uid(): string {
-  return (
-    Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
-  );
+function rollbackToast(msg: string) {
+  // lazy import to avoid bundling sonner into store
+  import("sonner").then(({ toast }) => toast.error(msg));
 }
 
-export const useStore = create<StoreState>()(
-  persist(
-    (set) => ({
+export const useStore = create<StoreState>()((set, get) => ({
+  courses: [],
+  tasks: [],
+  grades: [],
+  sessions: [],
+  attendance: [],
+  targets: {},
+  hydrated: false,
+  view: "dashboard",
+  selectedTaskId: null,
+  quickCaptureOpen: false,
+
+  hydrate: async () => {
+    try {
+      const res = await fetch("/api/hydrate");
+      if (!res.ok) throw new Error("hydrate failed");
+      const data = await res.json();
+      set({
+        courses: data.courses ?? [],
+        tasks: data.tasks ?? [],
+        grades: data.grades ?? [],
+        sessions: data.sessions ?? [],
+        attendance: data.attendance ?? [],
+        hydrated: true,
+        view: "dashboard",
+      });
+    } catch {
+      set({ hydrated: true });
+    }
+  },
+
+  logoutClear: () =>
+    set({
       courses: [],
       tasks: [],
       grades: [],
       sessions: [],
+      attendance: [],
       targets: {},
-      onboarded: false,
+      hydrated: false,
       view: "dashboard",
       selectedTaskId: null,
       quickCaptureOpen: false,
-
-      setView: (v) => set({ view: v, selectedTaskId: null }),
-      setSelectedTask: (id) => set({ selectedTaskId: id }),
-      setQuickCapture: (open) => set({ quickCaptureOpen: open }),
-
-      completeOnboarding: (courses, tasks) =>
-        set({ courses, tasks, onboarded: true, view: "dashboard" }),
-
-      resetAll: () =>
-        set({
-          courses: [],
-          tasks: [],
-          grades: [],
-          sessions: [],
-          targets: {},
-          onboarded: false,
-          view: "dashboard",
-          selectedTaskId: null,
-          quickCaptureOpen: false,
-        }),
-
-      addCourse: (c) => {
-        const id = uid();
-        const course: Course = { ...c, id, createdAt: new Date().toISOString() };
-        set((s) => ({ courses: [...s.courses, course] }));
-        return id;
-      },
-      updateCourse: (id, patch) =>
-        set((s) => ({
-          courses: s.courses.map((c) =>
-            c.id === id ? { ...c, ...patch } : c,
-          ),
-        })),
-      deleteCourse: (id) =>
-        set((s) => ({
-          courses: s.courses.filter((c) => c.id !== id),
-          tasks: s.tasks.filter((t) => t.courseId !== id),
-          grades: s.grades.filter((g) => g.courseId !== id),
-          targets: Object.fromEntries(
-            Object.entries(s.targets).filter(([k]) => k !== id),
-          ),
-        })),
-
-      addTask: (t) => {
-        const id = uid();
-        const task: Task = {
-          id,
-          title: t.title,
-          courseId: t.courseId,
-          dueDate: t.dueDate,
-          priority: t.priority ?? "medium",
-          status: t.status ?? "not_started",
-          estimatedHours: t.estimatedHours ?? 1,
-          notes: t.notes,
-          createdAt: new Date().toISOString(),
-        };
-        set((s) => ({ tasks: [task, ...s.tasks] }));
-        return id;
-      },
-      updateTask: (id, patch) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-        })),
-      deleteTask: (id) =>
-        set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
-      toggleTask: (id) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) =>
-            t.id === id
-              ? { ...t, status: t.status === "done" ? "not_started" : "done" }
-              : t,
-          ),
-        })),
-      setTaskStatus: (id, status) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
-        })),
-      rescheduleTask: (id, dueDate) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) => (t.id === id ? { ...t, dueDate } : t)),
-        })),
-
-      addGrade: (g) =>
-        set((s) => ({ grades: [...s.grades, { ...g, id: uid() }] })),
-      updateGrade: (id, patch) =>
-        set((s) => ({
-          grades: s.grades.map((g) => (g.id === id ? { ...g, ...patch } : g)),
-        })),
-      deleteGrade: (id) =>
-        set((s) => ({ grades: s.grades.filter((g) => g.id !== id) })),
-      setTarget: (courseId, target) =>
-        set((s) => ({ targets: { ...s.targets, [courseId]: target } })),
-
-      addSession: (s) =>
-        set((st) => ({
-          sessions: [
-            ...st.sessions,
-            { ...s, id: uid(), completedAt: new Date().toISOString() },
-          ],
-        })),
     }),
-    {
-      name: "studyflow-store-v1",
-      storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({
-        courses: s.courses,
-        tasks: s.tasks,
-        grades: s.grades,
-        sessions: s.sessions,
-        targets: s.targets,
-        onboarded: s.onboarded,
-        view: s.view,
-      }),
-    },
-  ),
-);
+
+  setView: (v) => set({ view: v, selectedTaskId: null }),
+  setSelectedTask: (id) => set({ selectedTaskId: id }),
+  setQuickCapture: (open) => set({ quickCaptureOpen: open }),
+
+  // ---------- courses ----------
+  addCourse: async (c) => {
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(c),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to add course");
+    const course = data.course as Course;
+    set((s) => ({ courses: [...s.courses, course] }));
+    return course;
+  },
+  updateCourse: (id, patch) => {
+    const prev = get().courses;
+    set((s) => ({ courses: s.courses.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
+    fetch(`/api/courses/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }).catch(() => {
+      set({ courses: prev });
+      rollbackToast("Couldn't save course — reverted");
+    });
+  },
+  deleteCourse: (id) => {
+    const prev = get();
+    set((s) => ({
+      courses: s.courses.filter((c) => c.id !== id),
+      tasks: s.tasks.filter((t) => t.courseId !== id),
+      grades: s.grades.filter((g) => g.courseId !== id),
+      attendance: s.attendance.filter((a) => a.courseId !== id),
+      targets: Object.fromEntries(Object.entries(s.targets).filter(([k]) => k !== id)),
+    }));
+    fetch(`/api/courses/${id}`, { method: "DELETE" }).catch(() => {
+      set({ courses: prev.courses, tasks: prev.tasks, grades: prev.grades, attendance: prev.attendance });
+      rollbackToast("Couldn't delete course — reverted");
+    });
+  },
+
+  // ---------- tasks ----------
+  addTask: async (t) => {
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(t),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to add task");
+    const task = data.task as Task;
+    set((s) => ({ tasks: [task, ...s.tasks] }));
+    return task;
+  },
+  updateTask: (id, patch) => {
+    const prev = get().tasks;
+    set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+    fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }).catch(() => {
+      set({ tasks: prev });
+      rollbackToast("Couldn't save task — reverted");
+    });
+  },
+  deleteTask: (id) => {
+    const prev = get().tasks;
+    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    fetch(`/api/tasks/${id}`, { method: "DELETE" }).catch(() => {
+      set({ tasks: prev });
+      rollbackToast("Couldn't delete task — reverted");
+    });
+  },
+  toggleTask: (id) => {
+    const task = get().tasks.find((t) => t.id === id);
+    if (!task) return;
+    const next = task.status === "done" ? "not_started" : "done";
+    get().updateTask(id, { status: next });
+  },
+  setTaskStatus: (id, status) => get().updateTask(id, { status }),
+  rescheduleTask: (id, dueDate) => get().updateTask(id, { dueDate }),
+
+  // ---------- grades ----------
+  addGrade: async (g) => {
+    const res = await fetch("/api/grades", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(g),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to add grade");
+    const grade = data.grade as GradeEntry;
+    set((s) => ({ grades: [...s.grades, grade] }));
+    return grade;
+  },
+  updateGrade: (id, patch) => {
+    const prev = get().grades;
+    set((s) => ({ grades: s.grades.map((g) => (g.id === id ? { ...g, ...patch } : g)) }));
+    fetch(`/api/grades/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }).catch(() => {
+      set({ grades: prev });
+      rollbackToast("Couldn't save grade — reverted");
+    });
+  },
+  deleteGrade: (id) => {
+    const prev = get().grades;
+    set((s) => ({ grades: s.grades.filter((g) => g.id !== id) }));
+    fetch(`/api/grades/${id}`, { method: "DELETE" }).catch(() => {
+      set({ grades: prev });
+      rollbackToast("Couldn't delete grade — reverted");
+    });
+  },
+  setTarget: (courseId, target) =>
+    set((s) => ({ targets: { ...s.targets, [courseId]: target } })),
+
+  // ---------- pomodoro ----------
+  addSession: async (s) => {
+    const res = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(s),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to log session");
+    const session = data.session as PomodoroSession;
+    set((st) => ({ sessions: [session, ...st.sessions] }));
+    return session;
+  },
+
+  // ---------- attendance ----------
+  setAttendance: async (courseId, date, status, note) => {
+    const res = await fetch("/api/attendance", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ courseId, date, status, note }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to save attendance");
+    const rec = data.attendance as AttendanceRecord;
+    set((s) => {
+      const others = s.attendance.filter(
+        (a) => !(a.courseId === courseId && a.date === rec.date),
+      );
+      return { attendance: [rec, ...others] };
+    });
+  },
+  deleteAttendance: (id) => {
+    const prev = get().attendance;
+    set((s) => ({ attendance: s.attendance.filter((a) => a.id !== id) }));
+    fetch(`/api/attendance/${id}`, { method: "DELETE" }).catch(() => {
+      set({ attendance: prev });
+      rollbackToast("Couldn't remove attendance — reverted");
+    });
+  },
+}));

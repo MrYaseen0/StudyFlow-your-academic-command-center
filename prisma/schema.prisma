@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// StudyFlow schema — multi-user, per-user data isolation via userId FK + cascade delete.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,19 +10,102 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  courses      Course[]
+  tasks        Task[]
+  grades       GradeEntry[]
+  sessions     PomodoroSession[]
+  attendance   Attendance[]
 }
 
-model Post {
+model Course {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  code        String
+  instructor  String   @default("")
+  color       String   @default("#C9748A")
+  creditHours Int      @default(3)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  grades      GradeEntry[]
+  sessions    PomodoroSession[]
+  attendance  Attendance[]
+
+  @@index([userId])
+}
+
+model Task {
+  id             String   @id @default(cuid())
+  userId         String
+  courseId       String
+  title          String
+  dueDate        DateTime
+  priority       String   @default("medium") // high | medium | low
+  status         String   @default("not_started") // not_started | in_progress | done
+  estimatedHours Float    @default(1)
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model GradeEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  courseId       String
+  assessmentName String
+  grade          Float
+  weight         Float
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+}
+
+model PomodoroSession {
+  id          String   @id @default(cuid())
+  userId      String
+  taskId      String?
+  courseId    String?
+  duration    Int
+  mode        String   @default("focus") // focus | break
+  completedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model Attendance {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  userId    String
+  courseId  String
+  date      DateTime
+  status    String   @default("present") // present | absent | late | excused
+  note      String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, date])
+  @@index([userId])
+  @@index([courseId])
 }

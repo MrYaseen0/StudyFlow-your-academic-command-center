@@ -53,7 +53,7 @@ export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultD
   const [estimatedHours, setEstimatedHours] = useState(() => task?.estimatedHours ?? 1);
   const [notes, setNotes] = useState(() => task?.notes ?? "");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) {
       toast.error("Add a title first");
       return;
@@ -67,30 +67,34 @@ export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultD
       return;
     }
     const iso = new Date(dueDate).toISOString();
-    if (task) {
-      updateTask(task.id, {
-        title: title.trim(),
-        courseId,
-        dueDate: iso,
-        priority,
-        status,
-        estimatedHours,
-        notes: notes.trim() || undefined,
-      });
-      toast.success("Task updated");
-    } else {
-      addTask({
-        title: title.trim(),
-        courseId,
-        dueDate: iso,
-        priority,
-        status,
-        estimatedHours,
-        notes: notes.trim() || undefined,
-      });
-      toast.success("Task added");
+    try {
+      if (task) {
+        updateTask(task.id, {
+          title: title.trim(),
+          courseId,
+          dueDate: iso,
+          priority,
+          status,
+          estimatedHours,
+          notes: notes.trim() || undefined,
+        });
+        toast.success("Task updated");
+      } else {
+        await addTask({
+          title: title.trim(),
+          courseId,
+          dueDate: iso,
+          priority,
+          status,
+          estimatedHours,
+          notes: notes.trim() || undefined,
+        });
+        toast.success("Task added");
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save task");
     }
-    onOpenChange(false);
   };
 
   return (

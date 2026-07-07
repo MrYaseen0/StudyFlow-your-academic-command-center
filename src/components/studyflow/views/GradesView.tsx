@@ -219,9 +219,13 @@ export function GradesView() {
                 </div>
 
                 <button
-                  onClick={() => {
-                    addGrade({ courseId: c.id, assessmentName: "New assessment", grade: 85, weight: 10 });
-                    toast.success("Assessment added");
+                  onClick={async () => {
+                    try {
+                      await addGrade({ courseId: c.id, assessmentName: "New assessment", grade: 85, weight: 10 });
+                      toast.success("Assessment added");
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Failed to add");
+                    }
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-blush-deep hover:text-rose-urgent transition-colors"
                 >

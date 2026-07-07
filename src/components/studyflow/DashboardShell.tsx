@@ -1,26 +1,30 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, BookOpen, CalendarDays, GraduationCap, Timer, Plus } from "lucide-react";
+import { LayoutDashboard, BookOpen, CalendarDays, GraduationCap, Timer, ClipboardCheck, FileText, LogOut } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { QuickCaptureButton } from "./QuickCaptureButton";
 import { DrawClock } from "./Drawings";
+import { useAuth } from "./AuthContext";
 import { useEffect } from "react";
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "planner", label: "Planner", icon: CalendarDays },
+  { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "grades", label: "Grades", icon: GraduationCap },
   { id: "timer", label: "Focus", icon: Timer },
+  { id: "records", label: "Records", icon: FileText },
 ];
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({ children, onLogout }: { children: React.ReactNode; onLogout: () => void }) {
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
   const tasks = useStore((s) => s.tasks);
+  const { user } = useAuth();
 
   const activeCount = tasks.filter((t) => t.status !== "done").length;
 
@@ -63,6 +67,28 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <span className="w-1.5 h-1.5 rounded-full bg-blush-deep" />
               {activeCount} active {activeCount === 1 ? "task" : "tasks"}
             </span>
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2 rounded-pill px-2.5 py-1" style={{ backgroundColor: "var(--color-cream-elevated)" }}>
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold text-white"
+                    style={{ backgroundColor: "var(--color-blush-deep)", fontFamily: "var(--font-serif)" }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-xs font-medium text-ink-secondary max-w-[120px] truncate">{user.name}</span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1.5 text-xs font-medium text-ink-secondary hover:bg-cream-elevated hover:text-rose-urgent transition-colors"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut size={14} />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
