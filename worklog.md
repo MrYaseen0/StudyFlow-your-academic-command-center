@@ -175,3 +175,32 @@ Stage Summary:
 - New Goals feature: users set learning goals, assign their existing tasks to each goal (self-directed learning), and watch progress fill as tasks complete — every goal has its own todo list. Achievable goals can be marked achieved. Goals also surface on the dashboard.
 - All data (courses, tasks, grades, sessions, attendance, goals) is stored in SQLite and retrieved per-user via the protected API. Nothing client-only.
 - Design system fully preserved across all new UI.
+
+---
+Task ID: 5
+Agent: main (Z.ai Code)
+Task: Add a cute in-app chatbot (Flow) that knows all features and redirects users to the right one. Built in ~5 minutes.
+
+Work Log:
+- Created src/components/studyflow/ChatBot.tsx:
+  - Floating button (bottom-left, so it doesn't clash with Quick Capture on bottom-right) with a pulsing ring + sparkle badge + Bot icon, blush gradient.
+  - Spring-expand chat panel: gradient header with "Flow" avatar + online status, scrollable message area, text input with send button.
+  - Intent engine: 11 keyword-based intents (dashboard, courses, goals, planner, attendance, grades, focus/timer, records, add task/quickcapture, help, greetings). Each returns a friendly response + a navigation action + optional quick replies.
+  - Quick-reply chips: each bot message can attach tappable chips that navigate instantly.
+  - Typing indicator: 3 animated dots while Flow "thinks" (~450ms delay for natural feel).
+  - Auto-navigate: after responding, Flow automatically navigates to the matched view (or opens Quick Capture) after 700ms, then closes the panel so the user lands on the target cleanly.
+  - "Flow" persona: cute, friendly, uses 🌸 emoji, calls itself the user's "study buddy".
+- Wired ChatBot into DashboardShell (renders alongside QuickCaptureButton).
+
+Verification (Agent Browser + VLM):
+- Login as Ayesha → dashboard loads → chatbot button (bottom-left) visible.
+- Clicked chatbot → panel opens with Flow greeting + 4 quick replies.
+- Typed "I want to set a goal" → Flow responded → auto-navigated to Goals view. ✓
+- Clicked "Focus timer" quick reply → navigated to Focus timer view instantly. ✓
+- VLM: confirmed pink/blush gradient header, bot avatar, online status, greeting with quick-reply chips, text input with send button, cream/blush palette (no purple/blue), cute and friendly. ✓
+- Lint: 0 errors.
+
+Stage Summary:
+- Flow the chatbot is live. Users can type natural language ("show my deadlines", "set a goal", "attendance", "focus timer", "add a task") or tap quick replies, and Flow takes them straight to the right feature. It knows every view in the app and can also trigger Quick Capture.
+- Design is cute and on-brand: blush gradient, bot avatar, pulsing ring, typing dots, 🌸 persona.
+- Note: rate limiter from the prior brute-force test briefly blocked login during verification — cleared by restarting the dev server (in-memory buckets reset). This is expected behavior for a single-process rate limiter.

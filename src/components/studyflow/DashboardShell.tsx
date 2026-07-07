@@ -7,6 +7,7 @@ import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { QuickCaptureButton } from "./QuickCaptureButton";
 import { DrawClock } from "./Drawings";
+import { ChatBot } from "./ChatBot";
 import { useAuth } from "./AuthContext";
 import { useEffect } from "react";
 
@@ -188,6 +189,9 @@ export function DashboardShell({ children, onLogout }: { children: React.ReactNo
 
       {/* Quick capture FAB */}
       <QuickCaptureButton />
+
+      {/* Flow — the chatbot study buddy */}
+      <ChatBot />
 
       {/* Footer */}
       <footer className="mt-auto border-t border-border-soft bg-cream-elevated/50">
