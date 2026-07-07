@@ -1,10 +1,11 @@
 // StudyFlow domain types
 
-export type View = "dashboard" | "courses" | "planner" | "grades" | "timer" | "attendance" | "records";
+export type View = "dashboard" | "courses" | "planner" | "grades" | "timer" | "attendance" | "records" | "goals";
 
 export type Priority = "high" | "medium" | "low";
 export type Status = "not_started" | "in_progress" | "done";
 export type AttendanceStatus = "present" | "absent" | "late" | "excused";
+export type GoalStatus = "active" | "achieved" | "paused";
 
 export interface Course {
   id: string;
@@ -20,11 +21,21 @@ export interface Task {
   id: string;
   title: string;
   courseId: string;
+  goalId?: string | null;
   dueDate: string; // ISO string
   priority: Priority;
   status: Status;
   estimatedHours: number;
   notes?: string;
+  createdAt: string;
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  targetDate?: string | null; // ISO or null
+  status: GoalStatus;
   createdAt: string;
 }
 

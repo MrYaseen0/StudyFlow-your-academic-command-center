@@ -40,11 +40,13 @@ function toLocalInput(iso: string): string {
 
 export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultDueDate }: TaskEditorProps) {
   const courses = useStore((s) => s.courses);
+  const goals = useStore((s) => s.goals);
   const addTask = useStore((s) => s.addTask);
   const updateTask = useStore((s) => s.updateTask);
 
   const [title, setTitle] = useState(() => task?.title ?? "");
   const [courseId, setCourseId] = useState(() => task?.courseId ?? defaultCourseId ?? courses[0]?.id ?? "");
+  const [goalId, setGoalId] = useState<string>(() => task?.goalId ?? "");
   const [dueDate, setDueDate] = useState(() =>
     task ? toLocalInput(task.dueDate) : toLocalInput(defaultDueDate ?? new Date(Date.now() + 3 * 86400000).toISOString()),
   );
@@ -67,11 +69,13 @@ export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultD
       return;
     }
     const iso = new Date(dueDate).toISOString();
+    const resolvedGoalId = goalId || null;
     try {
       if (task) {
         updateTask(task.id, {
           title: title.trim(),
           courseId,
+          goalId: resolvedGoalId,
           dueDate: iso,
           priority,
           status,
@@ -83,6 +87,7 @@ export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultD
         await addTask({
           title: title.trim(),
           courseId,
+          goalId: resolvedGoalId,
           dueDate: iso,
           priority,
           status,
@@ -146,6 +151,23 @@ export function TaskEditor({ task, open, onOpenChange, defaultCourseId, defaultD
               />
             </div>
           </div>
+
+          {goals.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="t-goal">Link to goal <span className="text-ink-muted font-normal">(optional)</span></Label>
+              <select
+                id="t-goal"
+                value={goalId}
+                onChange={(e) => setGoalId(e.target.value)}
+                className="w-full h-9 rounded-md border border-border-soft bg-cream-base px-3 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-blush-primary/40"
+              >
+                <option value="">No goal</option>
+                {goals.filter((g) => g.status !== "achieved").map((g) => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label>Priority</Label>

@@ -127,3 +127,51 @@ Stage Summary:
 - Existing features (dashboard, courses, planner, grades, focus timer, quick capture) all migrated to the API-backed store with optimistic updates; UX remains snappy.
 - Design system fully preserved: cream/blush palette, Fraunces/Inter/JetBrains Mono, campus photo background, hand-drawn illustrations, 16px cards, warm shadow.
 - Session via httpOnly JWT cookie (30-day), bcrypt password hashing, zod validation on all inputs.
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Harden security + DB performance + add Goals feature (set learning goals, assign tasks to self to achieve each goal, per-goal todo list with progress).
+
+Work Log:
+Security hardening:
+- Created src/lib/rate-limit.ts: in-memory sliding-window rate limiter (per key, auto-pruned), getClientIp helper, POLICIES (login: 10/15min, register: 5/hour), rateLimitedResponse (429 + Retry-After).
+- Wired rate limiting into /api/auth/login (keyed on BOTH IP and email — blocks distributed + targeted brute force) and /api/auth/register (keyed on IP — blocks account spam).
+- Strengthened password policy in register route: min 8 chars + must contain a letter + a number (was min 6). Updated AuthScreen placeholder to match.
+- Added security headers in next.config.ts: X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy, Permissions-Policy (camera/mic/geo disabled), Content-Security-Policy (self-only, frame-ancestors none), HSTS in production.
+- Kept existing protections: bcrypt hashing, httpOnly sameSite=lax JWT cookie, constant-time login verification (prevents user enumeration), zod input validation on all routes, per-user DB scoping (IDOR-safe), parameterized Prisma queries (SQL-injection-safe).
+
+Database performance:
+- Added composite index @@index([userId, status, dueDate]) on Task — optimizes the dashboard's most common query (active tasks sorted by due date).
+- Added @@index([goalId]) on Task for goal-progress lookups.
+- Added @@index([userId, status]) on Goal for filtering active/achieved.
+- Kept existing indexes on all userId + courseId foreign keys, plus the unique constraint on Attendance(userId, courseId, date) for fast upserts.
+- /api/hydrate uses Promise.all for 6 parallel queries (courses, tasks, grades, sessions, attendance, goals) — single round-trip to load the entire user state on login.
+- All queries scoped by userId at the DB level (no over-fetching across users).
+
+Goals feature (set goals → assign tasks → track progress):
+- Prisma: new Goal model (userId, title, description, targetDate, status: active|achieved|paused). Added goalId (nullable) to Task with onDelete: SetNull (deleting a goal unlinks its tasks, doesn't delete them).
+- API: /api/goals (GET/POST) + /api/goals/[id] (PATCH/DELETE), all requireUser + scoped. Tasks POST/PATCH accept goalId (with ownership verification). /api/hydrate returns goals. All serialized with goalId.
+- Store: added goals[] state, hydrate/logoutClear handle goals, addGoal (async POST), updateGoal (optimistic), deleteGoal (optimistic + unlinks tasks locally to mirror DB SetNull), assignTaskToGoal (wraps updateTask). NewTaskInput gains goalId.
+- GoalsView: set/edit/delete goals (dialog with title/description/target date); per-goal card shows progress bar + X/Y done count; "Assign task" button opens a picker of unassigned tasks; tasks listed under each goal with checkboxes (the "todo list to cover the goal"); "Mark as achieved" moves goal to Achieved section; sections for Active/Paused/Achieved.
+- TaskEditor: added "Link to goal" selector (shows active goals only) so tasks can be linked at creation/edit time.
+- Dashboard: added "Goals progress" widget in the right column showing top 3 active goals with mini progress bars; links to full Goals view.
+- Nav: added "Goals" (Target icon) between Courses and Planner in both desktop sidebar and mobile bottom nav.
+
+Verification (Agent Browser + curl):
+- Login as existing user (ayesha@university.edu) works — her data persisted in DB from prior session.
+- Goals view renders empty state → created goal "Master enzyme kinetics for the midterm" with description → appears under Active goals.
+- Clicked "Assign task" → picker showed unassigned tasks → assigned "Lab report: Enzyme kinetics analysis" → task now listed under goal with 0/1 progress.
+- Marked the task done from dashboard → returned to Goals → progress updated to 1/1 done (100%). Real-time goal-progress tracking confirmed.
+- Clicked "Mark as achieved" → goal moved to "Achieved" section with trophy icon. Full goal lifecycle works.
+- Dashboard "Goals progress" widget shows the active goal with progress bar.
+- VLM: goals view + dashboard widget confirmed cream/blush palette, readable, no layout issues.
+- Security: 12 rapid failed logins via curl → returned 401×9 then 429×3 (rate limiter triggered at 10th attempt). All 5 security headers present in response. Weak passwords rejected ("Password must be at least 8 characters", "Password must contain a number").
+- Lint: 0 errors. No runtime/console errors after clean restart.
+
+Stage Summary:
+- Security is now production-grade: rate limiting (brute-force protection on auth), security headers (CSP, clickjacking, MIME sniffing, permissions), strong password policy, httpOnly cookies, bcrypt hashing, per-user authorization on every query.
+- DB performance: composite indexes on the dashboard's hot query paths, parallel hydration in one round-trip, all queries scoped at the DB level.
+- New Goals feature: users set learning goals, assign their existing tasks to each goal (self-directed learning), and watch progress fill as tasks complete — every goal has its own todo list. Achievable goals can be marked achieved. Goals also surface on the dashboard.
+- All data (courses, tasks, grades, sessions, attendance, goals) is stored in SQLite and retrieved per-user via the protected API. Nothing client-only.
+- Design system fully preserved across all new UI.

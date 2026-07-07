@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarClock, Flame, TrendingUp, ArrowRight, AlertCircle } from "lucide-react";
+import { CalendarClock, Flame, TrendingUp, ArrowRight, AlertCircle, Target } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { getUrgency, isDueToday, relativeDueLabel } from "@/lib/urgency";
 import { computeGpa } from "@/lib/gpa";
@@ -17,6 +17,7 @@ export function DashboardView() {
   const grades = useStore((s) => s.grades);
   const targets = useStore((s) => s.targets);
   const sessions = useStore((s) => s.sessions);
+  const goals = useStore((s) => s.goals);
   const setView = useStore((s) => s.setView);
 
   const now = new Date();
@@ -217,6 +218,54 @@ export function DashboardView() {
             <p className="text-[11px] text-ink-muted mt-1">focused this semester</p>
           </div>
         </section>
+
+        {/* Goals snapshot */}
+        {goals.length > 0 && (
+          <section className="rounded-card bg-white border border-border-soft shadow-warm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Target size={15} className="text-blush-deep" strokeWidth={1.5} />
+                <h2 className="text-sm font-semibold" style={{ fontFamily: "var(--font-serif)" }}>
+                  Goals progress
+                </h2>
+              </div>
+              <button
+                onClick={() => setView("goals")}
+                className="text-[11px] font-medium text-ink-muted hover:text-blush-deep transition-colors inline-flex items-center gap-0.5"
+              >
+                All <ArrowRight size={11} />
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {goals.filter((g) => g.status === "active").slice(0, 3).map((g) => {
+                const gt = tasks.filter((t) => t.goalId === g.id);
+                const done = gt.filter((t) => t.status === "done").length;
+                const total = gt.length;
+                const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+                return (
+                  <div key={g.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] text-ink-secondary truncate flex-1 pr-2">{g.title}</span>
+                      <span className="text-[11px] nums font-medium text-ink-muted">{done}/{total}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--color-cream-elevated)" }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.5 }}
+                        style={{ backgroundColor: "var(--color-blush-deep)" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {goals.filter((g) => g.status === "active").length === 0 && (
+                <p className="text-[11px] text-ink-muted py-2 text-center">No active goals. Set one to track progress.</p>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

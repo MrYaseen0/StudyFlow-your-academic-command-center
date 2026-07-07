@@ -160,9 +160,9 @@ export function AuthScreen() {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder={mode === "register" ? "At least 6 characters" : "Your password"}
+                        placeholder={mode === "register" ? "Min 8 chars, with a letter & number" : "Your password"}
                         required
-                        minLength={mode === "register" ? 6 : 1}
+                        minLength={mode === "register" ? 8 : 1}
                         autoComplete={mode === "login" ? "current-password" : "new-password"}
                         className="w-full h-10 rounded-md border border-border-soft bg-cream-base pl-9 pr-3 text-sm text-ink-primary placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-blush-primary/40"
                       />

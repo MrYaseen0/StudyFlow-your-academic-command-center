@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, BookOpen, CalendarDays, GraduationCap, Timer, ClipboardCheck, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, BookOpen, CalendarDays, GraduationCap, Timer, ClipboardCheck, FileText, LogOut, Target } from "lucide-react";
 import { useStore } from "@/lib/store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { useEffect } from "react";
 const NAV_ITEMS: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "courses", label: "Courses", icon: BookOpen },
+  { id: "goals", label: "Goals", icon: Target },
   { id: "planner", label: "Planner", icon: CalendarDays },
   { id: "attendance", label: "Attendance", icon: ClipboardCheck },
   { id: "grades", label: "Grades", icon: GraduationCap },

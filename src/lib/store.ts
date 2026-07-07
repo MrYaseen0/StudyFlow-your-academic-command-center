@@ -5,6 +5,8 @@ import type {
   AttendanceRecord,
   AttendanceStatus,
   Course,
+  Goal,
+  GoalStatus,
   GradeEntry,
   PomodoroSession,
   Priority,
@@ -16,6 +18,7 @@ import type {
 export interface NewTaskInput {
   title: string;
   courseId: string;
+  goalId?: string | null;
   dueDate: string;
   priority?: Priority;
   status?: Status;
@@ -69,6 +72,13 @@ interface StoreState {
   // attendance
   setAttendance: (courseId: string, date: string, status: AttendanceStatus, note?: string) => Promise<void>;
   deleteAttendance: (id: string) => void;
+
+  // goals
+  goals: Goal[];
+  addGoal: (g: { title: string; description?: string; targetDate?: string | null }) => Promise<Goal>;
+  updateGoal: (id: string, patch: Partial<Pick<Goal, "title" | "description" | "targetDate" | "status">>) => void;
+  deleteGoal: (id: string) => void;
+  assignTaskToGoal: (taskId: string, goalId: string | null) => void;
 }
 
 function rollbackToast(msg: string) {
@@ -82,6 +92,7 @@ export const useStore = create<StoreState>()((set, get) => ({
   grades: [],
   sessions: [],
   attendance: [],
+  goals: [],
   targets: {},
   hydrated: false,
   view: "dashboard",
@@ -99,6 +110,7 @@ export const useStore = create<StoreState>()((set, get) => ({
         grades: data.grades ?? [],
         sessions: data.sessions ?? [],
         attendance: data.attendance ?? [],
+        goals: data.goals ?? [],
         hydrated: true,
         view: "dashboard",
       });
@@ -114,6 +126,7 @@ export const useStore = create<StoreState>()((set, get) => ({
       grades: [],
       sessions: [],
       attendance: [],
+      goals: [],
       targets: {},
       hydrated: false,
       view: "dashboard",
@@ -281,5 +294,48 @@ export const useStore = create<StoreState>()((set, get) => ({
       set({ attendance: prev });
       rollbackToast("Couldn't remove attendance — reverted");
     });
+  },
+
+  // ---------- goals ----------
+  addGoal: async (g) => {
+    const res = await fetch("/api/goals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(g),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Failed to add goal");
+    const goal = data.goal as Goal;
+    set((s) => ({ goals: [goal, ...s.goals] }));
+    return goal;
+  },
+  updateGoal: (id, patch) => {
+    const prev = get().goals;
+    set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)) }));
+    fetch(`/api/goals/${id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    }).catch(() => {
+      set({ goals: prev });
+      rollbackToast("Couldn't save goal — reverted");
+    });
+  },
+  deleteGoal: (id) => {
+    const prevGoals = get().goals;
+    const prevTasks = get().tasks;
+    set((s) => ({
+      goals: s.goals.filter((g) => g.id !== id),
+      // unlink tasks from the deleted goal (DB does SetNull; mirror locally)
+      tasks: s.tasks.map((t) => (t.goalId === id ? { ...t, goalId: null } : t)),
+    }));
+    fetch(`/api/goals/${id}`, { method: "DELETE" }).catch(() => {
+      set({ goals: prevGoals, tasks: prevTasks });
+      rollbackToast("Couldn't delete goal — reverted");
+    });
+  },
+  assignTaskToGoal: (taskId, goalId) => {
+    // optimistic; uses updateTask under the hood (which handles rollback)
+    get().updateTask(taskId, { goalId });
   },
 }));

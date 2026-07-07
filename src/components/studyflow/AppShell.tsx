@@ -13,6 +13,7 @@ import { GradesView } from "./views/GradesView";
 import { TimerView } from "./views/TimerView";
 import { AttendanceView } from "./views/AttendanceView";
 import { RecordsView } from "./views/RecordsView";
+import { GoalsView } from "./views/GoalsView";
 import { Loader2 } from "lucide-react";
 
 function AppInner() {
@@ -79,6 +80,7 @@ function ViewRouter() {
     <>
       {view === "dashboard" && <DashboardView />}
       {view === "courses" && <CoursesView />}
+      {view === "goals" && <GoalsView />}
       {view === "planner" && <PlannerView />}
       {view === "attendance" && <AttendanceView />}
       {view === "grades" && <GradesView />}

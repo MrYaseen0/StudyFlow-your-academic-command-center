@@ -22,6 +22,24 @@ model User {
   grades       GradeEntry[]
   sessions     PomodoroSession[]
   attendance   Attendance[]
+  goals        Goal[]
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  targetDate  DateTime?
+  status      String   @default("active") // active | achieved | paused
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([userId])
+  @@index([userId, status])
 }
 
 model Course {
@@ -47,6 +65,7 @@ model Task {
   id             String   @id @default(cuid())
   userId         String
   courseId       String
+  goalId         String?
   title          String
   dueDate        DateTime
   priority       String   @default("medium") // high | medium | low
@@ -57,9 +76,13 @@ model Task {
 
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  goal           Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
+  // Composite indexes for the dashboard's most common filtered/sorted queries.
   @@index([userId])
+  @@index([userId, status, dueDate])
   @@index([courseId])
+  @@index([goalId])
 }
 
 model GradeEntry {
