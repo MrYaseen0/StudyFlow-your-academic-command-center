@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   StudyFlow Design System — exact tokens, no substitutions
+   ============================================================ */
+@theme {
+  /* Color palette (exact hex values from spec) */
+  --color-cream-base: #fdf8f3;
+  --color-cream-elevated: #fbf1e8;
+  --color-white: #ffffff;
+  --color-blush-soft: #f5d6d9;
+  --color-blush-primary: #e8a0ac;
+  --color-blush-deep: #c9748a;
+  --color-rose-urgent: #b8506a;
+  --color-amber-warning: #d9a566;
+  --color-ink-primary: #2e2420;
+  --color-ink-secondary: #6b5d56;
+  --color-ink-muted: #a69a92;
+  --color-border-soft: #ede0d5;
+  --color-success-sage: #8fa894;
+
+  /* Fonts */
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Radii */
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  /* Warm soft shadow (single, not generic gray) */
+  --shadow-warm: 0 4px 20px rgba(46, 36, 32, 0.06);
+  --shadow-warm-lg: 0 12px 40px rgba(46, 36, 32, 0.1);
+  --shadow-fab: 0 8px 24px rgba(201, 116, 138, 0.32);
+
+  /* Easing */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Map tokens to semantic shadcn slots so existing ui components blend */
+:root {
+  --radius: 16px;
+  /* Font tokens — explicitly on :root so var(--font-serif) resolves everywhere.
+     next/font variables (--font-inter etc.) are set on <html> in layout. */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --background: #fdf8f3;
+  --foreground: #2e2420;
+  --card: #ffffff;
+  --card-foreground: #2e2420;
+  --popover: #ffffff;
+  --popover-foreground: #2e2420;
+  --primary: #c9748a;
+  --primary-foreground: #ffffff;
+  --secondary: #fbf1e8;
+  --secondary-foreground: #2e2420;
+  --muted: #fbf1e8;
+  --muted-foreground: #6b5d56;
+  --accent: #f5d6d9;
+  --accent-foreground: #2e2420;
+  --destructive: #b8506a;
+  --destructive-foreground: #ffffff;
+  --border: #ede0d5;
+  --input: #ede0d5;
+  --ring: #e8a0ac;
+  --chart-1: #c9748a;
+  --chart-2: #d9a566;
+  --chart-3: #8fa894;
+  --chart-4: #6b5d56;
+  --chart-5: #e8a0ac;
+  --sidebar: #fbf1e8;
+  --sidebar-foreground: #2e2420;
+  --sidebar-primary: #c9748a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5d6d9;
+  --sidebar-accent-foreground: #2e2420;
+  --sidebar-border: #ede0d5;
+  --sidebar-ring: #e8a0ac;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-soft);
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background-color: var(--color-cream-base);
+    color: var(--color-ink-primary);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--color-ink-primary);
+  }
+  /* Tabular numerals for data-dense UI */
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+/* Custom scrollbar — warm, subtle */
+@layer utilities {
+  .scrollbar-warm {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-soft) transparent;
+  }
+  .scrollbar-warm::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-warm::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-warm::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-soft);
+    border-radius: 999px;
+  }
+  .scrollbar-warm::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-muted);
+  }
+  .shadow-warm {
+    box-shadow: var(--shadow-warm);
+  }
+  .shadow-warm-lg {
+    box-shadow: var(--shadow-warm-lg);
+  }
+  .shadow-fab {
+    box-shadow: var(--shadow-fab);
+  }
+  .bg-grid-cream {
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(46, 36, 32, 0.04) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+}
