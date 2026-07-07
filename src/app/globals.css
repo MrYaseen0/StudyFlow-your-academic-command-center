@@ -91,7 +91,22 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
+    /* Layered background: campus photo under a cream wash.
+       Photo shows through at ~18% in page margins; cards/sections stay solid
+       (bg-white / bg-cream-elevated) so text remains crisp and readable. */
     background-color: var(--color-cream-base);
+    background-image:
+      linear-gradient(
+        135deg,
+        rgba(253, 248, 243, 0.86) 0%,
+        rgba(251, 241, 232, 0.92) 60%,
+        rgba(253, 248, 243, 0.88) 100%
+      ),
+      url("/user-bg.jpg");
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     color: var(--color-ink-primary);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";

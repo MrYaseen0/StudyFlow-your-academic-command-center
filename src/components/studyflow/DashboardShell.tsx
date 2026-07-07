@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { QuickCaptureButton } from "./QuickCaptureButton";
+import { DrawClock } from "./Drawings";
 import { useEffect } from "react";
 
 const NAV_ITEMS: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
@@ -38,9 +39,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream-base">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-cream-base/85 border-b border-border-soft">
+      <header className="sticky top-0 z-30 backdrop-blur-md bg-cream-base/80 border-b border-border-soft">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div
@@ -104,13 +105,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
 
-          <div className="mt-auto rounded-xl p-4" style={{ backgroundColor: "var(--color-cream-elevated)" }}>
-            <p className="text-[11px] font-semibold text-ink-secondary mb-1" style={{ fontFamily: "var(--font-serif)" }}>
-              Quick tip
-            </p>
-            <p className="text-[11px] text-ink-muted leading-relaxed">
-              Press <kbd className="px-1 py-0.5 rounded bg-white border border-border-soft text-[10px] font-mono">C</kbd> anywhere to capture a task in seconds.
-            </p>
+          <div className="mt-auto rounded-xl p-4 relative overflow-hidden" style={{ backgroundColor: "var(--color-cream-elevated)" }}>
+            <div className="absolute -right-2 -bottom-2 opacity-15 pointer-events-none">
+              <DrawClock size={64} />
+            </div>
+            <div className="relative">
+              <p className="text-[11px] font-semibold text-ink-secondary mb-1" style={{ fontFamily: "var(--font-serif)" }}>
+                Quick tip
+              </p>
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Press <kbd className="px-1 py-0.5 rounded bg-white border border-border-soft text-[10px] font-mono">C</kbd> anywhere to capture a task in seconds.
+              </p>
+            </div>
           </div>
         </nav>
 

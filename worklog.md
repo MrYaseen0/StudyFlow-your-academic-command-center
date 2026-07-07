@@ -40,3 +40,33 @@ Stage Summary:
 - State persists to localStorage; onboarding flow seeds the dashboard with no empty-state dead-ends.
 - Single / route (per environment constraint) using view-switching via Zustand store instead of React Router.
 - Browser-verified interactive and responsive.
+
+---
+Task ID: 2
+Agent: main (Z.ai Code)
+Task: Add the user's Google Drive image (CECOS University campus photo) as a background across the whole StudyFlow app, plus hand-drawn illustrations and a hero section.
+
+Work Log:
+- Fetched the Google Drive image via theusercontent.google.com download endpoint (file ID 19uK9iWha6m5ATzElh1BdEUWQQiMVZ02Z). It's a JPEG photo of CECOS University (beige building, teal glass, blue sky). Saved to public/user-bg.jpg.
+- VLM analyzed the image: detailed photo, would compete with text at full opacity → decided on tinted low-opacity treatment to preserve the cream/blush palette and readability.
+- Updated src/app/globals.css body rule: layered background = cream gradient overlay (rgba 0.86-0.92) over url('/user-bg.jpg'), fixed attachment, cover/center. Photo shows through ~18% in margins; cards stay solid.
+- Removed bg-cream-base from DashboardShell root (so body background shows through); header backdrop-blur tightened to /80.
+- Created src/components/studyflow/Drawings.tsx: 5 hand-drawn-style SVG line illustrations (DrawBooks, DrawClock, DrawCap, DrawNotebook, DrawRocket) using ink-secondary stroke, 1.5px, with soft tinted fills.
+- Redesigned OnboardingFlow step 0 as a HERO: full-width campus photo with blush/ink gradient overlay, white welcome headline "Welcome to your command center", floating animated DrawClock + DrawBooks accents. Choice cards (Start blank / Sample semester) now have corner drawings (DrawNotebook, DrawRocket) that brighten on hover.
+- Added DrawCap accent to onboarding step 1 (courses), DrawClock accent to step 2 (deadlines).
+- Added DrawClock to DashboardShell sidebar quick-tip card.
+- Replaced dashboard "Nothing due this week" empty-state icon with DrawBooks illustration.
+
+Verification (Agent Browser + VLM):
+- Onboarding: hero with campus photo + pink overlay + white text renders, good contrast, no layout issues.
+- Dashboard: subtle campus photo visible in margins behind solid white cards; text fully readable; hand-drawn clock in sidebar tip confirmed.
+- Grades + Planner views: same consistent background, all data readable, no contrast/layout problems.
+- Mobile (390px): no horizontal overflow, no overlapping, content readable (background mostly covered by full-width cards, which is expected and fine).
+- Lint: 0 errors. Runtime: no errors.
+
+Stage Summary:
+- The user's CECOS University campus photo is now the global background across all views (onboarding, dashboard, courses, planner, grades, focus) — applied as a cream-tinted low-opacity layer so the existing blush/cream palette and text readability are preserved.
+- Added a hero section to onboarding featuring the same photo prominently with a warm overlay and welcome copy.
+- Added 5 reusable hand-drawn SVG line illustrations used as decorative accents in onboarding, sidebar tip, and dashboard empty state.
+- Design consistency maintained: same palette, same fonts, same card/shadow system — the photo is a texture, not a replacement for the design system.
+- If the user wants the background more/less visible, the opacity is controlled by the rgba alpha values in globals.css body rule (currently 0.86-0.92) — easy to dial.

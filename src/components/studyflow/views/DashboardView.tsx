@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarClock, Flame, TrendingUp, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
+import { CalendarClock, Flame, TrendingUp, ArrowRight, AlertCircle } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { getUrgency, isDueToday, relativeDueLabel } from "@/lib/urgency";
 import { computeGpa } from "@/lib/gpa";
 import { TaskList } from "../TaskList";
 import { WeeklyHeatmap } from "../WeeklyHeatmap";
+import { DrawBooks } from "../Drawings";
 
 const DAY = 86400000;
 
@@ -125,8 +126,10 @@ export function DashboardView() {
           </div>
 
           {leftList.length === 0 ? (
-            <div className="py-8 text-center">
-              <Sparkles size={22} className="mx-auto mb-2 text-success-sage" strokeWidth={1.5} />
+            <div className="py-10 text-center">
+              <div className="flex justify-center mb-3">
+                <DrawBooks size={72} />
+              </div>
               <p className="text-sm font-medium text-ink-secondary" style={{ fontFamily: "var(--font-serif)" }}>
                 Nothing due this week.
               </p>

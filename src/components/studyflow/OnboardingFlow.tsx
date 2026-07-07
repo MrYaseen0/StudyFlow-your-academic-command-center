@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { COURSE_COLORS, type Course, type Task } from "@/lib/types";
 import { getSampleData } from "@/lib/sample-data";
+import { DrawBooks, DrawClock, DrawCap, DrawNotebook, DrawRocket } from "./Drawings";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -143,9 +144,9 @@ export function OnboardingFlow() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream-base bg-grid-cream">
-      {/* header */}
-      <header className="px-6 py-5 flex items-center gap-2.5 max-w-3xl mx-auto w-full">
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="px-6 py-5 flex items-center gap-2.5 max-w-5xl mx-auto w-full">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8A0AC, #C9748A)" }}>
           <span className="text-white font-serif font-semibold">S</span>
         </div>
@@ -176,38 +177,85 @@ export function OnboardingFlow() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="text-center"
               >
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8A0AC, #C9748A)" }}>
-                  <GraduationCap size={28} color="#ffffff" strokeWidth={1.5} />
-                </div>
-                <h2 className="text-3xl font-semibold mb-3" style={{ fontFamily: "var(--font-serif)", letterSpacing: "-0.02em" }}>
-                  Let's set up your semester
-                </h2>
-                <p className="text-sm text-ink-secondary max-w-md mx-auto leading-relaxed">
-                  Two quick steps: add your courses, then your first deadlines. Takes about a minute — or load a sample semester to explore first.
-                </p>
+                {/* HERO — campus photo with warm overlay + welcome */}
+                <div
+                  className="relative rounded-card overflow-hidden mb-6 shadow-warm-lg"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(135deg, rgba(201,116,138,0.78) 0%, rgba(46,36,32,0.55) 100%), url('/user-bg.jpg')",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                >
+                  <div className="px-6 sm:px-10 py-10 sm:py-14 text-center text-white relative">
+                    {/* floating hand-drawn accents */}
+                    <motion.div
+                      className="absolute top-4 right-5 opacity-40"
+                      animate={{ y: [0, -6, 0], rotate: [0, 4, 0] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <DrawClock size={56} className="opacity-90" />
+                    </motion.div>
+                    <motion.div
+                      className="absolute bottom-4 left-5 opacity-40"
+                      animate={{ y: [0, 5, 0], rotate: [0, -3, 0] }}
+                      transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    >
+                      <DrawBooks size={64} className="opacity-90" />
+                    </motion.div>
 
-                <div className="mt-8 grid sm:grid-cols-2 gap-3 max-w-md mx-auto">
+                    <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                      <GraduationCap size={26} color="#ffffff" strokeWidth={1.5} />
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl font-semibold mb-2 text-white" style={{ fontFamily: "var(--font-serif)", letterSpacing: "-0.02em" }}>
+                      Welcome to your command center
+                    </h2>
+                    <p className="text-sm sm:text-base text-white/85 max-w-md mx-auto leading-relaxed">
+                      Track every deadline, protect your GPA, and focus deeply — all in one calm, organized place.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Choice cards */}
+                <div className="grid sm:grid-cols-2 gap-3">
                   <button
                     onClick={() => setStep(1)}
-                    className="rounded-card p-5 border-2 text-left transition-all hover:shadow-warm"
-                    style={{ borderColor: "var(--color-blush-deep)", backgroundColor: "rgba(232, 160, 172, 0.06)" }}
+                    className="group rounded-card p-5 border-2 text-left transition-all hover:shadow-warm bg-white relative overflow-hidden"
+                    style={{ borderColor: "var(--color-blush-deep)" }}
                   >
-                    <Plus size={18} className="text-blush-deep mb-2" />
-                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Start blank</p>
-                    <p className="text-[11px] text-ink-muted mt-0.5">Add your own courses</p>
+                    <div className="absolute -right-3 -bottom-3 opacity-15 group-hover:opacity-30 transition-opacity">
+                      <DrawNotebook size={88} />
+                    </div>
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ background: "rgba(232, 160, 172, 0.16)" }}>
+                        <Plus size={18} className="text-blush-deep" />
+                      </div>
+                      <p className="text-base font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Start blank</p>
+                      <p className="text-[11px] text-ink-muted mt-0.5">Add your own courses &amp; deadlines</p>
+                    </div>
                   </button>
                   <button
                     onClick={loadSample}
-                    className="rounded-card p-5 border-2 text-left transition-all hover:shadow-warm"
-                    style={{ borderColor: "var(--color-border-soft)", backgroundColor: "var(--color-white)" }}
+                    className="group rounded-card p-5 border-2 text-left transition-all hover:shadow-warm bg-white relative overflow-hidden"
+                    style={{ borderColor: "var(--color-border-soft)" }}
                   >
-                    <Sparkles size={18} className="text-success-sage mb-2" />
-                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Sample semester</p>
-                    <p className="text-[11px] text-ink-muted mt-0.5">Explore with demo data</p>
+                    <div className="absolute -right-3 -bottom-3 opacity-15 group-hover:opacity-30 transition-opacity">
+                      <DrawRocket size={88} />
+                    </div>
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ background: "rgba(143, 168, 148, 0.18)" }}>
+                        <Sparkles size={18} className="text-success-sage" />
+                      </div>
+                      <p className="text-base font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Sample semester</p>
+                      <p className="text-[11px] text-ink-muted mt-0.5">Explore with 5 demo courses</p>
+                    </div>
                   </button>
                 </div>
+
+                <p className="text-center text-[11px] text-ink-muted mt-5">
+                  Takes about a minute. Data stays on your device.
+                </p>
               </motion.div>
             )}
 
@@ -218,13 +266,17 @@ export function OnboardingFlow() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-card bg-white border border-border-soft shadow-warm p-6"
+                className="rounded-card bg-white border border-border-soft shadow-warm p-6 relative overflow-hidden"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-semibold nums" style={{ backgroundColor: "var(--color-blush-deep)" }}>1</div>
-                  <h2 className="text-xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Your courses</h2>
+                <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none">
+                  <DrawCap size={120} />
                 </div>
-                <p className="text-xs text-ink-muted mb-5 ml-9">Add the courses you're taking this semester.</p>
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-semibold nums" style={{ backgroundColor: "var(--color-blush-deep)" }}>1</div>
+                    <h2 className="text-xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>Your courses</h2>
+                  </div>
+                  <p className="text-xs text-ink-muted mb-5 ml-9">Add the courses you're taking this semester.</p>
 
                 <div className="space-y-2.5">
                   {courses.map((c) => (
@@ -284,6 +336,7 @@ export function OnboardingFlow() {
                     Continue <ArrowRight size={14} />
                   </button>
                 </div>
+                </div>
               </motion.div>
             )}
 
@@ -294,8 +347,12 @@ export function OnboardingFlow() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                className="rounded-card bg-white border border-border-soft shadow-warm p-6"
+                className="rounded-card bg-white border border-border-soft shadow-warm p-6 relative overflow-hidden"
               >
+                <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none">
+                  <DrawClock size={120} />
+                </div>
+                <div className="relative">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-semibold nums" style={{ backgroundColor: "var(--color-blush-deep)" }}>2</div>
                   <h2 className="text-xl font-semibold" style={{ fontFamily: "var(--font-serif)" }}>First deadlines</h2>
@@ -369,6 +426,7 @@ export function OnboardingFlow() {
                   >
                     <Check size={14} /> Enter StudyFlow
                   </button>
+                </div>
                 </div>
               </motion.div>
             )}
